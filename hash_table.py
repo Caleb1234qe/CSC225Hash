@@ -1,66 +1,117 @@
+
 """CSC 225 - Hash table starter. Complete the TODO sections."""
 
-# These prime sizes are provided; you do not need to test for prime numbers.
 SIZES = [11, 23, 47, 97, 197, 397]
 
 
 class HashTable:
     def __init__(self, method="linear", hash_method="mod"):
-        self.method = method           # linear, quadratic, or chaining
-        self.hash_method = hash_method # mod or digit
+        self.method = method
+        self.hash_method = hash_method
         self.capacity = 11
         self.count = 0
 
         if method == "chaining":
-            # Each position must have its OWN list.
-            # [[]] * 11 would repeat references to the SAME list.
             self.table = [[] for i in range(self.capacity)]
         else:
             self.table = [None] * self.capacity
 
     def hash_key(self, key):
-        # These two hash functions are already provided.
         if self.hash_method == "mod":
             return key % self.capacity
+
         total = 0
         for digit in str(abs(key)):
             total += int(digit)
+
         return total % self.capacity
 
     def insert(self, key):
-        # TODO 1: Do not insert a duplicate. Use search() to check.
-        # TODO 2: Check whether one more key would exceed the limit:
-        #         linear: 0.70, quadratic: 0.50, chaining: 0.75.
-        #         If so, call resize() BEFORE inserting the new key.
-        #         Do this only after completing Milestone 4.
-        # TODO 3: Use hash_key(key) to find the starting position.
-        #         linear: try (start + i) % capacity
-        #         quadratic: try (start + i*i) % capacity
-        #         chaining: append to the list at the start position
-        # TODO 4: Increase count after inserting successfully.
-        pass
+        if self.search(key):
+            return
+
+        threshold = 0.70
+
+        if self.method == "quadratic":
+            threshold = 0.50
+        elif self.method == "chaining":
+            threshold = 0.75
+
+        if (self.count / self.capacity) >= threshold:
+            self.resize()
+
+        start = self.hash_key(key)
+
+        if self.method == "chaining":
+            self.table[start].append(key)
+        else:
+            i = 0
+            while i < self.capacity:
+                if self.method == "linear":
+                    pos = (start + i) % self.capacity
+                else:
+                    pos = (start + (i * i)) % self.capacity
+
+                if self.table[pos] is None:
+                    self.table[pos] = key
+                    break
+
+                i += 1
+
+        self.count += 1
 
     def search(self, key):
-        # TODO: Return True if key is stored, and False otherwise.
-        # Use the same positions as insert() for each method.
-        # In open addressing, stop at an empty position or after
-        # capacity attempts. No deletion is required.
-        pass
+        start = self.hash_key(key)
+
+        if self.method == "chaining":
+            return key in self.table[start]
+
+        for i in range(self.capacity):
+            if self.method == "linear":
+                pos = (start + i) % self.capacity
+            else:
+                pos = (start + (i * i)) % self.capacity
+
+            slot = self.table[pos]
+
+            if slot is None:
+                return False
+
+            if slot == key:
+                return True
+
+        return False
 
     def resize(self):
-        # TODO (Milestone 4):
-        # 1. Save your old table.
-        # 2. Change capacity to the next value in SIZES.
-        # 3. Make a new empty table of the correct kind.
-        # 4. Set count to 0.
-        # 5. Insert each old value again using insert().
-        #    For chaining, remember each position is a LIST.
-        # Do not just copy old values into the same positions.
-        pass
+        old_table = self.table
+
+        index = SIZES.index(self.capacity)
+
+        if index + 1 >= len(SIZES):
+            return
+
+        self.capacity = SIZES[index + 1]
+
+        if self.method == "chaining":
+            self.table = [[] for _ in range(self.capacity)]
+        else:
+            self.table = [None] * self.capacity
+
+        self.count = 0
+
+        if self.method == "chaining":
+            for bucket in old_table:
+                for key in bucket:
+                    self.insert(key)
+        else:
+            for slot in old_table:
+                if slot is not None:
+                    self.insert(slot)
 
     def show(self):
         print("\nMethod:", self.method, "| Hash:", self.hash_method)
         print("Size:", self.capacity, "| Values:", self.count)
         print("Load factor:", round(self.count / self.capacity, 2))
+
         for i in range(self.capacity):
             print(i, ":", self.table[i])
